@@ -24,21 +24,27 @@ import MdocDataModel18013
 public actor SampleDataSecureArea: SecureArea {
 
     public let storage: any SecureKeyStorage
-    public nonisolated(unsafe) var x963Key: Data?
+    private var x963Key: Data?
 
-    init(storage: any SecureKeyStorage) {
+    public init(storage: any SecureKeyStorage, x963Key: Data? = nil) {
         self.storage = storage
+        self.x963Key = x963Key
+    }
+
+    /// Sets the x963 key representation for use in key creation.
+    /// - Parameter key: The x963 representation of the private key.
+    public func setX963Key(_ key: Data?) {
+        self.x963Key = key
     }
     nonisolated public static func create(storage: any MdocDataModel18013.SecureKeyStorage) -> SampleDataSecureArea {
         SampleDataSecureArea(storage: storage)
     }
     public static var supportedEcCurves: [CoseEcCurve] { [.P256, .P384, .P521] }
     public func getStorage() async -> any MdocDataModel18013.SecureKeyStorage { storage }
-    
-    public func createKeyBatch(id: String, keyOptions: KeyOptions?) async throws -> [CoseKey] {
+
+    public func createKeyBatch(id: String, credentialOptions: CredentialOptions, keyOptions: KeyOptions?) async throws -> [CoseKey] {
         let x963Priv: Data; let x963Pub: Data
         let curve = keyOptions?.curve ?? .P256
-        let batchSize = keyOptions?.batchSize ?? 1
         switch curve {
         case .P256:
             let key = if let x963Key { try P256.Signing.PrivateKey(x963Representation: x963Key) } else { P256.Signing.PrivateKey() }
@@ -51,13 +57,17 @@ public actor SampleDataSecureArea: SecureArea {
             x963Priv = key.x963Representation; x963Pub = key.publicKey.x963Representation
         default: throw SecureAreaError("Unsupported curve \(curve)")
         }
-        let batchSizeData = withUnsafeBytes(of: batchSize.littleEndian) { Data($0) }
         let kbi = KeyBatchInfo(secureAreaName: Self.name, crv: curve, usedCounts: [0], credentialPolicy: .rotateUse)
         try await storage.writeKeyInfo(id: id, dict: [kSecValueData as String: kbi.toData() ?? Data(), kSecAttrDescription as String: curve.jwkName.data(using: .utf8)!])
         try await storage.writeKeyDataBatch(id: id, startIndex: 0, dicts: [[kSecValueData as String: x963Priv]], keyOptions: keyOptions)
         return [CoseKey(crv: curve, x963Representation: x963Pub)]
     }
     
+    public func getPublicKey(id: String, index: Int, curve: CoseEcCurve) async throws -> CoseKey {
+        let softwareSA = SoftwareSecureArea(storage: storage)
+        return try await softwareSA.getPublicKey(id: id, index: index, curve: curve)
+    }
+
     /// delete key
     public func deleteKeyBatch(id: String, startIndex: Int, batchSize: Int) async throws {
         try await storage.deleteKeyBatch(id: id, startIndex: startIndex, batchSize: batchSize)
