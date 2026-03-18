@@ -7,7 +7,7 @@
       "location" : "https://github.com/rhbrunetto/eudi-lib-ios-iso18013-data-model.git",
       "state" : {
         "branch" : "fix/ble-large-payload",
-        "revision" : "a90e22376b1b81d33a9e09c7e46dab7cab1d9348"
+        "revision" : "485a9fd51e5c509fab1189d7ef576824f858bba9"
       }
     },
     {
