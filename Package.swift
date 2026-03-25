@@ -6,7 +6,6 @@ import PackageDescription
 let package = Package(
     name: "MdocSecurity18013",
     platforms: [.macOS(.v13), .iOS(.v16), .watchOS(.v10)],
-    swiftLanguageModes: [.v5],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
@@ -32,5 +31,6 @@ let package = Package(
             dependencies: ["MdocSecurity18013"],
             resources: [.process("Resources")]
         )
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )
